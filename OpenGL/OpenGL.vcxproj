@@ -141,6 +141,8 @@
     <ClInclude Include="player.h" />
     <ClInclude Include="RigidBody.hpp" />
     <ClInclude Include="shader.h" />
+    <ClInclude Include="stb_image.h" />
+    <ClInclude Include="Terrain.h" />
   </ItemGroup>
   <ItemGroup>
     <None Include="fragmentShader.frag" />
@@ -148,6 +150,11 @@
   </ItemGroup>
   <ItemGroup>
     <Text Include="physics.txt" />
+  </ItemGroup>
+  <ItemGroup>
+    <Image Include="grass.jpg" />
+    <Image Include="stone.jpg" />
+    <Image Include="wood.jpg" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

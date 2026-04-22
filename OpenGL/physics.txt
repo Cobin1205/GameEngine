@@ -1,238 +1,40 @@
-
-
-
-Ah — 3D changes the recommendation significantly, and the “most common hobby engine” stack becomes much more standardized.
-
-The most common serious 3D hobby-engine physics architecture is:
-
-Rigid body dynamics + broadphase BVH/DBVT + GJK/EPA narrowphase + sequential impulse solver
-
-This is the same family used by Bullet, PhysX, Jolt, ReactPhysics3D, and most custom hobby engines.
-
-Since your objects are already defined by vertices, this is actually ideal for convex mesh rigid bodies.
-
-The most common 3D hobby-engine stack
-1) Rigid body simulation (6 DOF)
-
-In 3D every body needs:
-
-position
-orientation quaternion
-linear velocity
-angular velocity
-inverse mass
-inverse inertia tensor
-force accumulator
-torque accumulator
-
-This is the standard 6-degree-of-freedom rigid body setup:
-
-3 positional axes
-3 rotational axes
-
-This is the backbone of almost every hobby 3D engine.
-
-2) Broad phase: DBVT / BVH
-
-For 3D, the most common broadphase in hobby engines is:
-
-Dynamic Bounding Volume Tree (DBVT)
-
-This is usually better than octrees for moving rigid bodies.
-
-Great options:
-
-dynamic AABB tree
-BVH
-sweep and prune (good for many boxes)
-spatial hash (good for lots of tiny dynamic objects)
-
-Most hobby engines choose DBVT first.
-
-3) Narrow phase: GJK + EPA
-
-This is the big one.
-
-For 3D convex meshes made from vertices, the most common approach is:
-
-GJK for overlap
-
-EPA for penetration depth and normal
-
-This is far more common in 3D than SAT for arbitrary convex hulls.
-
-Why this is ideal for your vertex objects
-
-If every object is a vertex mesh:
-
-compute convex hull once
-use support mapping
-run GJK
-use EPA to get MTV / normal
-
-That’s basically how many real engines do it.
-
-SAT is still fine for:
-
-OBBs
-boxes
-specific polyhedra
-
-But GJK/EPA scales better for general convex meshes.
-
-4) Solver: Sequential impulses
-
-This is still the most common answer.
-
-Even in 3D, hobby engines overwhelmingly use:
-
-Sequential Impulse constraint solving
-
-This handles:
-
-collision response
-friction
-stacking
-joints
-resting contacts
-ragdolls later
-
-It’s the “industry standard hobbyist solver.”
-
-Recommended build order for YOUR 3D engine
-
-Here’s the practical path I’d use.
-
-Phase 1 — convex collision
-sphere
-AABB
-OBB
-convex hull
-support function
-GJK
-EPA
-
-Phase 2 — rigid body motion
-semi-implicit Euler
-quaternions
-torque
-inertia tensor
-world-space inverse inertia
-
-Phase 3 — contacts
-contact point generation
-persistent manifolds
-warm starting
-friction
-restitution
-
-Phase 4 — real engine quality
-sleeping
-continuous collision detection
-joints
-character controller
-multithreaded islands
-
-This is the usual “grown-up hobby engine” progression.
-
-Best resources for 3D specifically
-
-These are the ones I’d strongly recommend.
-
-1) Real-Time Collision Detection
-
-The best book for your exact use case:
-
-convex polyhedra from vertices in 3D
-
-It covers:
-
-GJK
-SAT
-BVHs
-contact generation
-spatial trees
-numerical robustness
-
-This is the 3D collision bible.
-
-Book: Christer Ericson – Real-Time Collision Detection
-Widely recommended by engine devs.
-
-2) ReactPhysics3D source
-
-This is probably the best “readable hobby 3D engine.”
-
-It directly uses:
-
-DBVT
-SAT/GJK
-sequential impulses
-convex mesh colliders
-
-This may be the single best reference for your exact engine.
-
-3) Dirk Gregorius + Erin Catto GDC talks
-
-Absolute gold for 3D.
-
-Especially:
-
-SAT in 3D
-contact manifold generation
-GJK
-iterative solvers
-continuous collision
-
-These talks are hugely influential in hobby engines.
-
-4) Allen Chou’s 3D physics articles
-
-Very implementation-focused.
-
-Great for:
-
-inertia tensors
-contact constraints
-Jacobians
-sequential impulses
-My honest recommendation for your engine
-
-Because your engine is 3D and vertex-based, the most common and best hobby route is:
-
-Convex hull colliders + GJK/EPA + sequential impulses
-
-That is the standard “I’m building a real 3D engine” route.
-
-If you try to jump straight into concave mesh-vs-mesh physics, it gets painful fast.
-
-The winning strategy is:
-
-render mesh != physics mesh
-
-Use:
-
-visual mesh = arbitrary vertices
-physics mesh = convex hull or compound hulls
-
-That’s what most real engines do.
-
-My strongest advice
-
-Your first milestone should be:
-
-stable cube stacking
-
-If your engine can stack:
-
-20 cubes
-no jitter
-no sinking
-no exploding rotation
-
-you’re on the right path.
-
-That test exposes nearly every major solver flaw.
-
-If you want, I can help you 
-design the exact 3D physics pipeline + data structures (Body, Collider, ContactManifold, GJK simplex, EPA polytope) for a vertex-based engine.
+3D PHYSICS ENGINE ARCHITECTURE OVERVIEW
+
+I. CORE DATA STRUCTURES
+- State: Position (Vector3), Orientation (Quaternion)
+- Motion: Linear Velocity, Angular Velocity
+- Mass: Inverse Mass (1/m), Inverse Inertia Tensor (Local and World)
+- Force: Force Accumulator, Torque Accumulator
+- Integration: Semi-Implicit Euler
+
+II. COLLISION PIPELINE (THE CHAIN)
+1. Broadphase: Dynamic Bounding Volume Tree (DBVT)
+   - Use AABB hierarchy to prune non-colliding pairs.
+2. Narrowphase Part A: GJK (Gilbert-Johnson-Keerthi)
+   - Job: Determine IF objects overlap.
+   - Input: Support Mapping (Vertex Data).
+3. Narrowphase Part B: EPA (Expansion Polytope Algorithm)
+   - Job: Find Penetration Depth and Collision Normal.
+   - Trigger: Only runs if GJK returns 'true'.
+4. Manifold Generation:
+   - Job: Create and persist contact points over time.
+
+III. THE SOLVER (SEQUENTIAL IMPULSES)
+- Handles: Collision response, Friction, and Restitution.
+- Stability: Use Warm Starting (cache previous impulses).
+- Constraints: Solves velocity-level constraints iteratively.
+
+IV. IMPLEMENTATION ROADMAP
+Phase 1: Support Functions -> GJK -> EPA
+Phase 2: Rigid Body Dynamics -> Quaternion Integration -> Inertia Tensors
+Phase 3: Persistent Manifolds -> Sequential Impulse Solver
+Phase 4: DBVT Broadphase -> Sleeping Logic -> Constraints/Joints
+
+V. THE GOLD STANDARD TEST
+- Goal: Stable Cube Stacking.
+- Success: 20 cubes stacked without jitter, sinking, or rotation drift.
+
+VI. RECOMMENDED RESOURCES
+- Book: Real-Time Collision Detection (Christer Ericson)
+- Source: ReactPhysics3D (Readable 3D reference)
+- Lectures: Erin Catto / Dirk Gregorius GDC Vault talks
