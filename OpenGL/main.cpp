@@ -9,6 +9,8 @@
 #include <vector>
 #include "player.h"
 #include "Terrain.h"
+#include "Pyramid.h"
+#include <random>
 
 // GLFW is a framework for creating windows, 
 //manage OpenGL contexts, and handle user input 
@@ -23,17 +25,23 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height){
 	glViewport(0, 0, width, height);
 }
 
+//Scene Objects
 Player player = Player();
 
-
 int main() {
+
+	//random stuff
+	std::random_device rd;
+	std::mt19937 gen(rd());
+	std::uniform_real_distribution<> colDist(0,1);
+	std::uniform_int_distribution<> xzDist(-200, 200);
+	std::uniform_int_distribution<> yDist(0, 100);
 
 	//Initialize GLFW
 	glfwInit();
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
 	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
 	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-
 
 	//Create glfw window
 	GLFWwindow* window = glfwCreateWindow(800, 600, "OpenGL Project", NULL, NULL);
@@ -53,9 +61,6 @@ int main() {
 		return -1;
 	}
 
-	Terrain terrain = Terrain(); 
-	terrain.setupMesh(); 
-
 	//Tell OpenGL the window size
 	//First two parameters tell OpenGL that (0,0) is at the bottom left of the screen
 	//Last two parameters tell OpenGL the width and height of the window
@@ -64,34 +69,10 @@ int main() {
 
 	Shader shader("./vertexShader.vert", "./fragmentShader.frag");
 
-	//Initialize texture
-	unsigned int texture;
-	glGenTextures(1, &texture);
-	glBindTexture(GL_TEXTURE_2D, texture); 
-
-	//Set texture parameters
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-
-	//load texture (grass)
-	int width, height, nrChannels;
-	unsigned char* data = stbi_load("grass.jpg", &width, &height, &nrChannels, 0);
-
-	if (data) {
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
-		glGenerateMipmap(GL_TEXTURE_2D);
-	}
-	else {
-		std::cout << "Failed to load texture" << std::endl;
-	}
-	stbi_image_free(data); 
-
 	glEnable(GL_DEPTH_TEST);
 
 	glm::mat4 projection;
-	projection = glm::perspective(glm::radians(70.0f), 800.0f / 600.0f, 0.1f, 10000000.0f);
+	projection = glm::perspective(glm::radians(70.0f), 800.0f / 600.0f, 0.1f, 10000.0f);
 
 	//Disable cursor and set cursor functionality
 	glfwSetInputMode(window, GLFW_CURSOR, GLFW_CURSOR_DISABLED);
@@ -99,6 +80,24 @@ int main() {
 
 	float deltaTime = 0.0f;
 	float lastFrame = 0.0f;
+
+	//Initialize objects
+	Terrain terrain = Terrain();
+	terrain.setupMesh();
+
+	Pyramid bigolsahur = Pyramid();
+	unsigned int sahurTex = bigolsahur.useTexture("TheTripleT.jpg");
+	bigolsahur.setScale(glm::vec3(1000.0f));
+	bigolsahur.setPosition(glm::vec3(0.0f, -500.0f, 0.0f));
+
+	//Make a ton of Pyramids
+	const int numPyramids = 1000;
+	Pyramid pyramids[numPyramids];
+	for (int i = 0; i < numPyramids; i++) {
+		pyramids[i].useColor(glm::vec4(1.0f, 0.0f, 1.0f, 1.0f));
+		pyramids[i].setPosition(glm::vec3(xzDist(gen), yDist(gen), xzDist(gen)));
+	}
+	
 
 	//Main program loop
 	while (!glfwWindowShouldClose(window)) {
@@ -112,35 +111,36 @@ int main() {
 		//Process user input such as mouse and key input
 		processInput(window, deltaTime);
 
-		// --<>--<>--<> || RENDER STUFF || <>--<>--<>-- //
-
 		//Clear the screen
 		glClearColor(0.5f, 0.78f, 0.89f, 1.0f);
 
 		//Use the shader program
 		shader.use();
-
-		terrain.draw();
+		glActiveTexture(GL_TEXTURE0);
+		shader.setInt("ourTexture", 0);
 
 		player.setDirection();
 
-		//Initialize matrices
-		glm::mat4 model = glm::mat4(1.0f); 
-		model = glm::rotate(model, glm::radians(0.0f), glm::vec3(1.0f, 0.0f, 0.0f)); 
+		//Projection Matrices
 		glm::mat4 view = glm::mat4(1.0f);
 		view = glm::lookAt(player.cameraPos, player.cameraPos + player.cameraFront, player.cameraUp);
-
-		//Apply projections to the shader
-		int modelLoc = glGetUniformLocation(shader.ID, "model"); 
-		glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model)); 
 		int viewLoc = glGetUniformLocation(shader.ID, "view");
 		glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
 		int projLoc = glGetUniformLocation(shader.ID, "projection");
 		glUniformMatrix4fv(projLoc, 1, GL_FALSE, glm::value_ptr(projection));
-		
-		//Bind the texture and VAO
-		glBindTexture(GL_TEXTURE_2D, texture);
 
+		//Terrain Draw
+		terrain.draw(shader);
+
+		//Draw pyramids
+		for (int i = 0; i < numPyramids; i++) {
+			pyramids[i].rotate(glm::vec3(0.0f, 1.0f, 0.0f) * deltaTime * 500.0f);
+			pyramids[i].draw(shader);
+		}
+
+		bigolsahur.rotate(glm::vec3(0.0f, 1.0f, 0.0f) * deltaTime * 10.0f);
+		bigolsahur.draw(shader);
+		
 		glfwSwapBuffers(window);
 		glfwPollEvents();
 	}

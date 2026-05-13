@@ -1,5 +1,5 @@
 #include <glm.hpp>
-#include "RigidBody.hpp"
+#include "RigidBody.h"
 
 class Player : RigidBody {
 public:
@@ -14,7 +14,7 @@ public:
 	float lastX = 400;
 	float lastY = 300;
 
-	float moveSpeed = 0.05f;
+	float moveSpeed = 50.0f;
 
 	//Set where the camera should look each frame
 	void setDirection() {
@@ -40,7 +40,7 @@ public:
 			moveDir = glm::normalize(moveDir) * 0.2f;
 		}
 
-		cameraPos += moveDir * moveSpeed;
+		cameraPos += moveDir * moveSpeed * deltaTime;
 	}
 
 	//Make player look around on mouse movement

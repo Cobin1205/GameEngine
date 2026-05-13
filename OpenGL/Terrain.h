@@ -2,6 +2,7 @@
 #include <glm.hpp>
 #include <vector>
 #include <glad/glad.h>
+#include "shader.h"
 
 class Terrain {
 private:
@@ -9,7 +10,7 @@ private:
 	std::vector<float> vertices;
 	std::vector<unsigned int> indices;
 
-	unsigned int VBO, VAO, EBO;
+	unsigned int VBO, VAO, EBO, texture;
 
 	//Perlin Noise Functions
 	float dot(const glm::vec2& g, float dx, float dy) {
@@ -115,6 +116,29 @@ private:
 
 public:
 	Terrain() {
+		//Initialize texture
+		glGenTextures(1, &texture);
+		glBindTexture(GL_TEXTURE_2D, texture);
+
+		//Set texture parameters
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+		//load texture (grass)
+		int width, height, nrChannels;
+		unsigned char* data = stbi_load("grass.jpg", &width, &height, &nrChannels, 0);
+
+		if (data) {
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGB, width, height, 0, GL_RGB, GL_UNSIGNED_BYTE, data);
+			glGenerateMipmap(GL_TEXTURE_2D);
+		}
+		else {
+			std::cout << "Failed to load texture" << std::endl;
+		}
+		stbi_image_free(data);
+
 		vertices.resize(200 * 200 * 5);
 		generate();
 	}
@@ -122,7 +146,7 @@ public:
 	//Do weird OpenGL stuff
 	void setupMesh() {
 		// Initialize the buffer objects
-		glGenVertexArrays(1, &VAO);
+		glGenVertexArrays(1, &VAO); 
 		glGenBuffers(1, &VBO);
 		glGenBuffers(1, &EBO);
 
@@ -144,13 +168,12 @@ public:
 		glBindVertexArray(0);
 	}
 
-	void draw() {
+	void draw(Shader& shader) {
+		shader.setMat4("model", glm::mat4(1.0f));
+		shader.setBool("useTexture", 1);
+		glBindTexture(GL_TEXTURE_2D, texture);
 		glBindVertexArray(VAO);
 		glDrawElements(GL_TRIANGLES, (GLsizei)indices.size(), GL_UNSIGNED_INT, 0);
-
-		/* glDeleteVertexArrays(1, &VAO);
-		glDeleteBuffers(1, &VBO);
-		glDeleteBuffers(1, &EBO); */
 	}
 
 	float getHeight(float x, float z) {

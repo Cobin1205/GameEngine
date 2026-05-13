@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -136,10 +136,12 @@
     <ClCompile Include="..\..\..\..\Downloads\glad\src\glad.c" />
     <ClCompile Include="image.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="Pyramid.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="Sphere.h" />
     <ClInclude Include="player.h" />
-    <ClInclude Include="RigidBody.hpp" />
+    <ClInclude Include="RigidBody.h" />
     <ClInclude Include="shader.h" />
     <ClInclude Include="stb_image.h" />
     <ClInclude Include="Terrain.h" />
